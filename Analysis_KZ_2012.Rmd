@@ -1,18 +1,25 @@
 Krajské volby 2012
 ========================================================
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring web pages (click the **MD** toolbar button for help on Markdown).
-
-When you click the **Knit HTML** button a web page will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
 ```{r tidy=FALSE}
-kraje <- read.csv("~/github/local/ElectionsCZ/CSVKraje/Kraje_CandRegDetails2012.csv")
+kraje <- read.csv("~/github/local/ElectionsCZ/CSVKraje/Kraje_CandRegDetails2012_2.csv")
 library(ggplot2)
 library(stringr)
 library(plyr)
 library(reshape)
 
-kraje$female <- ifelse(str_detect(kraje$KandJmeno,"ová"),1,0)
+# load data for resolving female names
+firstnames_female <- read.csv("~/github/local/ElectionsCZ/OtherData/NamesFemale.csv")
+firstnames_female$female <- 1
+firstnames_male <- read.csv("~/github/local/ElectionsCZ/OtherData/NamesMale.csv")
+firstnames_male$female <- 0
+
+nameslist <- rbind(firstnames_male, firstnames_female)
+nameslist <- rename(nameslist, c("Name" = "KandKrestniJmeno"))
+nameslist$Rank <- NULL
+nameslist$Count <- NULL
+
+merge(kraje, nameslist)
 
 ciselnik_kandidatky <- read.csv("~/github/local/ElectionsCZ/OtherData/Ciselnik_KZ_2012_kandidatky.csv")
 ciselnik_kandidatky <- rename(ciselnik_kandidatky, c("KandNum" = "Kandidatka"))
@@ -57,4 +64,3 @@ You can also embed plots, for example:
 ```{r fig.width=7, fig.height=6}
 plot(plot_women)
 ```
-

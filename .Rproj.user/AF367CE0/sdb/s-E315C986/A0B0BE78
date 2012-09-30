@@ -1,0 +1,16 @@
+{
+    "contents" : "Krajské volby 2012\n========================================================\n\n```{r tidy=FALSE}\nkraje <- read.csv(\"~/github/local/ElectionsCZ/CSVKraje/Kraje_CandRegDetails2012_2.csv\")\nlibrary(ggplot2)\nlibrary(stringr)\nlibrary(plyr)\nlibrary(reshape)\n\n# load data for resolving female names\nfirstnames_female <- read.csv(\"~/github/local/ElectionsCZ/OtherData/NamesFemale.csv\")\nfirstnames_female$female <- 1\nfirstnames_male <- read.csv(\"~/github/local/ElectionsCZ/OtherData/NamesMale.csv\")\nfirstnames_male$female <- 0\n\nnameslist <- rbind(firstnames_male, firstnames_female)\nnameslist <- rename(nameslist, c(\"Name\" = \"KandKrestniJmeno\"))\nnameslist$Rank <- NULL\nnameslist$Count <- NULL\n\nmerge(kraje, nameslist)\n\nciselnik_kandidatky <- read.csv(\"~/github/local/ElectionsCZ/OtherData/Ciselnik_KZ_2012_kandidatky.csv\")\nciselnik_kandidatky <- rename(ciselnik_kandidatky, c(\"KandNum\" = \"Kandidatka\"))\nkraje <- merge(ciselnik_kandidatky, kraje, by = \"Kandidatka\")\n\nciselnik_kraje <- read.csv(\"~/github/local/ElectionsCZ/OtherData/Ciselnik_KZ_2012_kraje.csv\")\nkraje <- merge(ciselnik_kraje, kraje, by = \"Kraj\")\n\nkraje_pocetkand <- ddply(kraje, .(Kraj, Kandidatka), nrow)\nkraje_pocetkand <- rename(kraje_pocetkand, c(\"V1\"=\"PocetKand\"))\nkraje <- merge(kraje, kraje_pocetkand, by=c(\"Kandidatka\",\"Kraj\"))\n\n\navgfemale <- ddply(kraje, .(Kraj, Kandidatka), summarise,\n                   FemPerc = mean(female))\n\nkraje_fem <- subset(kraje, female == 1)\navgpostfemale <- ddply(kraje_fem, .(Kraj, Kandidatka), summarise,\n                      FemPos = 1-mean(PoradiKand/PocetKand))\n\nwomen <- merge(avgfemale, avgpostfemale, c(\"Kandidatka\", \"Kraj\"))\nwomen <- merge(women, ciselnik_kandidatky)\nwomen <- merge(women, ciselnik_kraje)\n\nrm(kraje_pocetkand, ciselnik_kraje, ciselnik_kandidatky, kraje_fem,\n   avgfemale, avgpostfemale)\n\nplot_women <- ggplot(subset(women, str_detect(women$KandName,\"KDU\")),\n               aes(FemPerc, FemPos,\n                  colour = as.factor(KandName),\n                  label=KrajName)) +\n          geom_text() +\n          #facet_wrap(~KandName) + \n          scale_color_discrete(\"clarity\") +\n          ylim(0,1) + \n          xlim(0,1)\n\n```\n\nYou can also embed plots, for example:\n\n```{r fig.width=7, fig.height=6}\nplot(plot_women)\n```\n\n",
+    "created" : 1348615088728.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1256070559",
+    "id" : "A0B0BE78",
+    "lastKnownWriteTime" : 1348615461,
+    "path" : "~/github/local/Blah/Analysis_KZ_2012.Rmd",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "source_on_save" : false,
+    "type" : "r_markdown"
+}

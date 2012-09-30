@@ -1,0 +1,21 @@
+{
+    "contents" : "",
+    "created" : 1348614849655.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "2715FFEA",
+    "lastKnownWriteTime" : 8101223856959651841,
+    "path" : null,
+    "properties" : {
+        "contentUrl" : "content?title=Data%3A+women&file=56a2c12d82c54133a845f9ecc1eae43d.htm",
+        "displayedObservations" : 238,
+        "displayedVariables" : 6,
+        "title" : "Data: women",
+        "totalObservations" : 238,
+        "variables" : 6
+    },
+    "source_on_save" : false,
+    "type" : "r_dataframe"
+}

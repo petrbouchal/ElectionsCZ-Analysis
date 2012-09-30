@@ -1,0 +1,6 @@
+auto_roxygenize_for_build_and_reload="0"
+auto_roxygenize_for_build_package="1"
+auto_roxygenize_for_check="1"
+cleanup_after_check="1"
+makefile_args=""
+view_dir_after_failed_check="0"

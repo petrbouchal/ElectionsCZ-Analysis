@@ -1,0 +1,9 @@
+{
+    "path" : "~/github/local/Blah",
+    "sortOrder" : [
+        {
+            "ascending" : true,
+            "columnIndex" : 2
+        }
+    ]
+}

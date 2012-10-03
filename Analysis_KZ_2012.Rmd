@@ -11,7 +11,7 @@ library(reshape)
 
 Resolve gender from names list
 
-```{r DataAdd, tidy=FALSE}
+```{r DataParse, tidy=FALSE}
 # load data for resolving female names
 firstnames_female <- read.csv("~/github/local/ElectionsCZ/OtherData/NamesFemale.csv")
 firstnames_female$female <- 1
@@ -23,27 +23,43 @@ nameslist <- rename(nameslist, c("Name" = "KandKrestniJmeno"))
 nameslist$Rank <- NULL
 nameslist$Count <- NULL
 
-kraje <- merge(kraje, nameslist)
+nameslist <-unique(nameslist)
+
+kraje <- join(kraje, nameslist,type="left",match="first")
 
 rm(firstnames_female, firstnames_male, nameslist)
+
 ```
 
-Add real names for regions and parties, add candidate counts
+Add real names for regions and parties, add candidate counts and relative
+position
 
 ```{r GenderResolve, tidy=FALSE}
 ciselnik_kandidatky <- read.csv("~/github/local/ElectionsCZ/OtherData/Ciselnik_KZ_2012_kandidatky.csv")
 ciselnik_kandidatky <- rename(ciselnik_kandidatky, c("KandNum" = "Kandidatka"))
-kraje <- merge(ciselnik_kandidatky, kraje, by = "Kandidatka")
+kraje <- join(kraje, ciselnik_kandidatky, by = "Kandidatka", match="first")
 
 ciselnik_kraje <- read.csv("~/github/local/ElectionsCZ/OtherData/Ciselnik_KZ_2012_kraje.csv")
-kraje <- merge(ciselnik_kraje, kraje, by = "Kraj")
+kraje <- join(kraje, ciselnik_kraje, by = "Kraj",match="first")
 
 kraje_pocetkand <- ddply(kraje, .(Kraj, Kandidatka), nrow)
 kraje_pocetkand <- rename(kraje_pocetkand, c("V1"="PocetKand"))
-kraje <- merge(kraje, kraje_pocetkand, by=c("Kandidatka","Kraj"))
+kraje <- join(kraje, kraje_pocetkand, by=c("Kandidatka","Kraj"),match="first")
 
 kraje$relPoradiKand <- kraje$PoradiKand/kraje$PocetKand
 kraje$relPoradiKand <- 1-kraje$relPoradiKand
+```
+
+Create simple tool for making subsets easily
+
+```{r Selectors, tidy=FALSE}
+select_regions$Kraj <- c(10)
+select_regions$selected <- 1
+
+select_list$Kandidatka <- c()
+select_list$selected <- 1
+
+kraje_seldkraj = merge(kraje,select_regions)
 ```
 
 Calculate how women are represented on lists and what positions they get

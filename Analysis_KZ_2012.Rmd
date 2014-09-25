@@ -71,7 +71,6 @@ avgfemale <- ddply(kraje, .(Kraj, Kandidatka), summarise,
 kraje_fem <- subset(kraje, female == 1)
 avgpostfemale <- ddply(kraje_fem, .(Kraj, Kandidatka), summarise,
                       FemPos = 1-mean(PoradiKand/PocetKand))
-
 women <- merge(avgfemale, avgpostfemale, c("Kandidatka", "Kraj"))
 women <- merge(women, ciselnik_kandidatky)
 women <- merge(women, ciselnik_kraje)

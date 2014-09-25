@@ -1,18 +1,27 @@
-Krajské volby 2012
-========================================================
+##Krajské volby 2012
+##========================================================
 
-kraje <- read.csv("~/github/local/ElectionsCZ/CSVKraje/Kraje_CandRegDetails2012_2.csv")
 library(ggplot2)
 library(stringr)
 library(plyr)
 library(reshape)
+library(ggthemes)
 
-Resolve gender from names list
+setwd('~/github/local/ElectionsCZ-Analysis/')
+kraje12 <- read.csv("../ElectionsCZ/data-votes/KZ2012/KZ12_PrefHlasy_KandidatKraj.csv")
+strkraje08 <- read.csv("../ElectionsCZ/data-votes/KZ2008/KZ08_PrefHlasy_KandidatKraj.csv")
+
+kraje12$year <- 2012
+kraje08$year <- 2008
+
+kraje <- rbind(kraje12, kraje08) 
+
+## Resolve gender from names list
 
 # load data for resolving female names
-firstnames_female <- read.csv("~/github/local/ElectionsCZ/OtherData/NamesFemale.csv")
+firstnames_female <- read.csv("../ElectionsCZ/OtherData/NamesFemale.csv")
 firstnames_female$female <- 1
-firstnames_male <- read.csv("~/github/local/ElectionsCZ/OtherData/NamesMale.csv")
+firstnames_male <- read.csv("../ElectionsCZ/OtherData/NamesMale.csv")
 firstnames_male$female <- 0
 
 nameslist <- rbind(firstnames_male, firstnames_female)
@@ -24,18 +33,45 @@ nameslist <-unique(nameslist)
 
 kraje <- join(kraje, nameslist,type="left",match="first")
 
+krajstrana <- read.csv('../ElectionsCZ/CSVKraje/Kraje_PartyReg_2012_Kraj.csv')
+krajstrana$Kandidatka <- krajstrana$KandidatkaCislo
+krajstrana$URL <- NULL
+krajstrana$HlasyStranaKraj <- krajstrana$Hlasy
+krajstrana$Hlasy <- NULL
+krajstrana$ProcentaStranaKraj <- krajstrana$Procenta
+krajstrana$Procenta <- NULL
+
+sumprefvotes <- ddply(kraje, .(Kandidatka,Kraj), summarize,
+                       SumPrefVotes = sum(Hlasy))
+
+kraje <- join(kraje, sumprefvotes)
+kraje <- join(kraje, krajstrana)
+
+krajstrana <- join(krajstrana, sumprefvotes)
+krajstrana <- join(krajstrana, ciselnik_kandidatky)
+krajstrana <- join(krajstrana, ciselnik_kraje)
+krajstrana$UsedPrefVotes <- krajstrana$SumPrefVotes/(4*krajstrana$HlasyStranaKraj)
+
+kraje$PercPrefVotes <- kraje$Hlasy/kraje$SumPrefVotes
+
+check <- ddply(kraje, .(Kraj, Kandidatka), summarise,
+              Check=sum(PercPrefVotes))
+mean(check$Check)
+rm(check)
+
 rm(firstnames_female, firstnames_male, nameslist)
 
+##Add real names for regions and parties, add candidate counts and relative
+## position
 
-Add real names for regions and parties, add candidate counts and relative
-position
-
-ciselnik_kandidatky <- read.csv("~/github/local/ElectionsCZ/OtherData/Ciselnik_KZ_2012_kandidatky.csv")
+ciselnik_kandidatky <- read.csv("../ElectionsCZ/OtherData/Ciselnik_KZ_2012_kandidatky.csv", sep="\t")
 ciselnik_kandidatky <- rename(ciselnik_kandidatky, c("KandNum" = "Kandidatka"))
 kraje <- join(kraje, ciselnik_kandidatky, by = "Kandidatka", match="first")
 
 ciselnik_kraje <- read.csv("~/github/local/ElectionsCZ/OtherData/Ciselnik_KZ_2012_kraje.csv")
 kraje <- join(kraje, ciselnik_kraje, by = "Kraj",match="first")
+
+# create list of all candidate lists across regions, with names of both
 
 kraje_pocetkand <- ddply(kraje, .(Kraj, Kandidatka), nrow)
 kraje_pocetkand <- rename(kraje_pocetkand, c("V1"="PocetKand"))
@@ -44,17 +80,7 @@ kraje <- join(kraje, kraje_pocetkand, by=c("Kandidatka","Kraj"),match="first")
 kraje$relPoradiKand <- kraje$PoradiKand/kraje$PocetKand
 kraje$relPoradiKand <- 1-kraje$relPoradiKand
 
-Create simple tool for making subsets easily
-
-select_regions$Kraj <- c(10)
-select_regions$selected <- 1
-
-select_list$Kandidatka <- c()
-select_list$selected <- 1
-
-kraje_seldkraj = merge(kraje,select_regions)
-
-Calculate how women are represented on lists and what positions they get
+## Calculate how women are represented on lists and what positions they get
 
 avgfemale <- ddply(kraje, .(Kraj, Kandidatka), summarise,
                    FemPerc = mean(female))
@@ -79,11 +105,11 @@ plot_women <- ggplot(subset(women, str_detect(women$KandName,"SZ")),
           xlim(0,1)
 plot_women
 
-This is a plot of the representation and position of women on lists of party X:
+##This is a plot of the representation and position of women on lists of party X:
 
 plot(plot_women)
 
-Look at how education affects position on lists
+## Look at how education affects position on lists
 
 # create dummies for relevant education markers
 kraje$nodegree <- ifelse(kraje$KandTitul == "",1,0)
@@ -96,7 +122,7 @@ kraje$judr <- ifelse(str_detect(kraje$KandTitul, "JUDr."),1,0)
 kraje$mvdr <- ifelse(str_detect(kraje$KandTitul, "MVDr."),1,0)
 kraje$rndr <- ifelse(str_detect(kraje$KandTitul, "RNDr."),1,0)
 kraje$phdr <- ifelse(str_detect(kraje$KandTitul, "PhDr."),1,0)
-kraje$phdr <- ifelse(str_detect(kraje$KandTitul, "Paed."),1,0)
+kraje$paeddr <- ifelse(str_detect(kraje$KandTitul, "Paed."),1,0)
 kraje$mba <- ifelse(str_detect(kraje$KandTitul, "MBA"),1,0)
 kraje$prof <- ifelse(str_detect(kraje$KandTitul, "Prof"),1,0)
 kraje$phd <- ifelse(str_detect(kraje$KandTitul, "Ph."),1,0)
@@ -107,7 +133,8 @@ kraje$doc <- ifelse(str_detect(kraje$KandTitul, "doc."),1,0)
 # build education level variable
 kraje$KandEdu <- "bez VŠ"
 kraje$KandEdu[kraje$bc==1] <- "bakalářské"
-kraje$KandEdu[kraje$mgr==1 | kraje$judr==1 | kraje$mudr==1 | kraje$mvdr==1 | kraje$ing == 1] <- "magisterské"
+kraje$KandEdu[kraje$mgr==1 | kraje$judr==1 | kraje$mudr==1] <- "magisterské"
+kraje$KandEdu[kraje$mvdr==1 | kraje$ing == 1] <- "magisterské"
 kraje$KandEdu[kraje$phd==1] <- "doktorské"
 kraje$KandEdu[kraje$doc==1] <- "docent"
 kraje$KandEdu[kraje$prof==1] <- "profesor"
@@ -116,13 +143,13 @@ kraje$KandEdu <- as.factor(kraje$KandEdu)
 kraje$KandEdu <- relevel(kraje$KandEdu, ref = 2)
 
 # run first exploratory model
-lm_party_educ <- lm(relPoradiKand ~ KandVek + KandEdu + female + mba + judr + mudr,
+lm_party_educ <- lm(Hlasy ~ KandVek + KandEdu + female + mba + judr + mudr,
                     kraje,
                     #subset(str_detect(women$KandName,"TOP"))
                     )
 summary.lm(lm_party_educ)
 
-Now let's look at professions/regional elected positions:
+## Now let's look at professions/regional elected positions:
 
 kraje$starosta <- ifelse(str_detect(kraje$Povolani, "starost"),1,0)
 kraje$starosta[kraje$starosta==1] <- ifelse(str_detect(kraje$Povolani[kraje$starosta==1],
@@ -147,27 +174,28 @@ kraje$lekar <- ifelse(str_detect(kraje$Povolani, "lékař"),1,0)
 kraje$ucitel <- ifelse(str_detect(kraje$Povolani, "učitel"),1,0)
 
 kraje$bezprislusnosti <- ifelse(kraje$Prislusnost=="BEZPP",1,0)
+kraje$prvnimisto <- ifelse(kraje$PoradiKand==1,1,0)
 
 krajelist <- unique(kraje$KrajName)
-lm_party_SPOZ <- lm(relPoradiKand ~ KandVek + female +
-                     KandEdu + judr + mudr + mba +
+lm_party <- lm(PercPrefVotes ~ KandVek + female + PoradiKand +
+                     KandEdu + prvnimisto +
+                     judr + mudr + mba +
                      zastupitel + poslanec + radni + 
                      hejtman + vicehejtman +
                      starosta + mistostarosta +
-                     lekar + ucitel + 
-                     lekar*mudr +
-                     bezprislusnosti,
+                     lekar + ucitel + KrajName +
+                     bezprislusnosti + lekar*mudr,
                      kraje,
-                     subset=(str_detect(kraje$KandName,"SPOZ")
+                     subset=(str_detect(kraje$KandAbbrev,"TOP")
                    ))
+summary.lm(lm_party)
 
-lm_party_CSSD <- lm(relPoradiKand ~ KandVek + female +
+lm_party_CSSD <- lm(Hlasy ~ KandVek + female +
                      KandEdu + judr + mudr + mba +
                      zastupitel + poslanec + radni + 
                      hejtman + vicehejtman +
                      starosta + mistostarosta +
                      lekar + ucitel + 
-                     lekar*mudr +
                      bezprislusnosti,
                      kraje,
                      subset=(str_detect(kraje$KandName,"ČSSD")
@@ -282,9 +310,7 @@ lm_party_NarSoc <- lm(relPoradiKand ~ KandVek + female +
                    ))
 
 #summary.lm(lm_party_all)
-
-
-           
+    
 library(coefplot)
 alllmplot <- multiplot(lm_party_ODS, lm_party_CSSD, lm_party_TOP, lm_party_VV,
             lm_party_KSCM, lm_party_SPOZ, lm_party_SZ, lm_party_Pirati,
@@ -326,3 +352,34 @@ educrossplot <- ggplot(kraje_select, aes(x=KandName, y=KandEdu))
 educrossplot + stat_sum(aes(colour=..n..), geom="tile") +
   scale_colour_gradient(low="yellow", high="red") +
   facet_wrap(~KrajName, scales="free")
+
+obcesocec2010 = read.csv("../ElectionsCZ/data-socec/obce2010.csv")
+kz12_obce0 = read.csv("../ElectionsCZ/CSVKraje/Kraje_PartyTown_Kraj_2012.csv")
+obcesocec2010$CisloObce <- obcesocec2010$KODOBCE 
+kz12_obce = join(kz12_obce0, obcesocec2010)
+rm(kz12_obce0)
+
+kz12_obce <- join(kz12_obce, ciselnik_kandidatky)
+kz12_obce <- rename(kz12_obce, c("Kraj" = "Kraj1"))
+kz12_obce <- rename(kz12_obce, c("Okres" = "Kraj"))
+kz12_obce <- rename(kz12_obce, c("Kraj1" = "Okres"))
+kz12_obce <- join(kz12_obce, ciselnik_kraje)
+
+
+kz12_KSCM <- subset(kz12_obce, KandAbbrev == "KSČM")
+lm_KSCM <- lm(Procenta ~ 
+                Ucast + PlatneProc + PocetObyv + MigraceSaldo +
+                Prirustek + Over65Perc + Under15Perc + NezamPerc + factor(Kraj),
+              kz12_obce,
+              na.action=na.omit,
+              subset=(str_detect(kz12_obce$KandAbbrev,"KSČM")))
+summary.lm(lm_KSCM)
+
+## Kolik hlasů šlo stranám < 5%?
+hlasypod5 <- subset(krajstrana, ProcentaStranaKraj < 4.99)
+hlasypod5 <- ddply(hlasypod5, .(Kraj), summarize,
+                   HlasyPod5 = sum(HlasyStranaKraj))
+hlasytotal  <- ddply(krajstrana, .(Kraj), summarize,
+                     HlasyTotalKraj = sum(HlasyStranaKraj))
+hlasyperkraj <- join(hlasypod5, hlasytotal)
+hlasyperkraj$PercPod5 <- hlasyperkraj$HlasyPod5/hlasyperkraj$HlasyTotalKraj
